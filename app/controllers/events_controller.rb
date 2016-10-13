@@ -1,63 +1,61 @@
 class EventsController < ApplicationController
-	# before_action :all_tasks, only: [:index, :create]
-	# respond_to :html, :js
 
 	def index
-		@events = current_user.events
-		render :layout => false
+		@events = current_user.events.limit(8)
+		@user = current_user
+	end
+
+	def new
+		# render 'in-progress'
 	end
 
 	def create
-		@event = Event.new(user_id: current_user.id, drone_id: 1)
-
-		# To include drone_id in event
-		# if current_user.drones.length == 1
-			# drone = Drone.find_by user_id: current_user.id
-		# 	@event.drone_id = drone.id
-		# elsif current_user.drones.length > 1
-		# 	Drone.where(user_id: current_user.id)
-		# 	# alert message -- which one?
-		# else
-		# 	error_message = "Set up a guardian to follow you home"
-		# end
-
+		@event = Event.new(user_id: current_user.id, drone_id: 1, event_status: "not connected")
 
 		if @event.save
-			# get location data from phone (add to event table)
-
 			if request.xhr?
+				@event.update(place_id: params["place_id"])
+				render status: 200, :json => {event_id: "#{@event.id}", drone_id: "#{@event.drone.id}"}
 
-				@event.to_json
-			else
 			end
 		else
 			@error_messages = @event.errors.full_messages
 			p @error_messages
 			root_path
 		end
-		#
 	end
 
 	def edit
-		p "in the edit route"
-		p "*" * 50
 		edit_event_path
 	end
 
-	def update
-		# assign:
-			# event.permanent_url
-		# delete:   ????
-			# event.temp_url
-		# update:
-			# event.completed = true
+	def show
+		@event = Event.find(params[:id])
+		@user = User.find(@event.user.id)
 
-		# submits text message to friend indicating home safely
-		redirect_to 'events_path'
+		#friend variable will need to be updated
+		@friend = Friend.find(@user.friends.first.id)
+		event_path
+	end
+
+	def update
+		p params
+		@event = Event.find(params[:id])
+		@event.update(event_status: params[:event_status])
 	end
 
 	def destroy
 		# does user need to be able to destroy event from the events index?
+	end
+
+	def stream
+		@event = Event.find(params[:event_id])
+		event_stream_path
+	end
+
+	def status
+		@event = Event.find(params[:event_id])
+		render status: 200, :json => { event_status: @event.event_status }
 	end
 
 end
